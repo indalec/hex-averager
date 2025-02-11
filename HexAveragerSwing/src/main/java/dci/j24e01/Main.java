@@ -1,10 +1,10 @@
 package dci.j24e01;
-
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Random;
 
 public class Main extends JFrame {
     private final List<ColorEntry> colorEntries = new ArrayList<>();
@@ -14,36 +14,49 @@ public class Main extends JFrame {
     private final JLabel resultLabel;
     private final JPanel resultPreview;
     private final JButton calculateButton;
+    private final Random random = new Random();
 
     public Main() {
         setTitle("Color Average Calculator");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLayout(new BorderLayout());
-        setSize(600, 400);
+        setSize(800, 500);
+        setMinimumSize(new Dimension(600, 400));
 
-        // Top controls
-        JPanel topPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 5));
+        // Top controls with wrapping layout
+        JPanel topPanel = new JPanel(new WrapLayout(FlowLayout.LEFT, 5, 5));
         ButtonGroup typeGroup = new ButtonGroup();
-        rgbRadio = new JRadioButton("RGB (6 characters)", true);
-        rgbaRadio = new JRadioButton("RGBA (8 characters)");
+        rgbRadio = new JRadioButton("RGB (6 chars)", true);
+        rgbaRadio = new JRadioButton("RGBA (8 chars)");
         typeGroup.add(rgbRadio);
         typeGroup.add(rgbaRadio);
 
-        JButton addButton = new JButton("Add Color");
-        calculateButton = new JButton("Calculate Average");
+        JButton addButton = new JButton("Add");
+        JButton removeButton = new JButton("Remove");
+        JButton randomButton = new JButton("Random");
+        calculateButton = new JButton("Calculate");
 
-        topPanel.add(new JLabel("Color Type:"));
+        // Set consistent button sizes
+        Dimension btnSize = new Dimension(80, 25);
+        addButton.setPreferredSize(btnSize);
+        removeButton.setPreferredSize(btnSize);
+        randomButton.setPreferredSize(btnSize);
+        calculateButton.setPreferredSize(new Dimension(100, 25));
+
+        topPanel.add(new JLabel("Type:"));
         topPanel.add(rgbRadio);
         topPanel.add(rgbaRadio);
-        topPanel.add(Box.createHorizontalStrut(20));
+        topPanel.add(Box.createHorizontalStrut(10));
         topPanel.add(addButton);
+        topPanel.add(removeButton);
+        topPanel.add(randomButton);
         topPanel.add(calculateButton);
         add(topPanel, BorderLayout.NORTH);
 
-        // Color entries area with wrapping layout
+        // Color entries area
         colorsPanel = new JPanel(new WrapLayout(FlowLayout.LEFT, 10, 10));
         JScrollPane scrollPane = new JScrollPane(colorsPanel);
-        scrollPane.setPreferredSize(new Dimension(600, 250));
+        scrollPane.setPreferredSize(new Dimension(800, 350));
         add(scrollPane, BorderLayout.CENTER);
 
         // Result area
@@ -51,7 +64,7 @@ public class Main extends JFrame {
         resultLabel = new JLabel("Average Color: ");
         resultLabel.setFont(new Font("SansSerif", Font.BOLD, 14));
         resultPreview = new JPanel();
-        resultPreview.setPreferredSize(new Dimension(100, 40));
+        resultPreview.setPreferredSize(new Dimension(120, 50));
         resultPreview.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(Color.BLACK),
                 BorderFactory.createEmptyBorder(5, 5, 5, 5)
@@ -63,9 +76,10 @@ public class Main extends JFrame {
 
         // Event handlers
         addButton.addActionListener(this::addColorField);
+        removeButton.addActionListener(this::removeLastField);
+        randomButton.addActionListener(this::addRandomColor);
         calculateButton.addActionListener(e -> calculateAverage());
 
-        // Add initial color field
         addColorField(null);
     }
 
@@ -83,12 +97,50 @@ public class Main extends JFrame {
         colorsPanel.repaint();
     }
 
+    private void removeLastField(ActionEvent e) {
+        if (!colorEntries.isEmpty()) {
+            int lastIndex = colorEntries.size() - 1;
+            colorsPanel.remove(lastIndex);
+            colorEntries.remove(lastIndex);
+            colorsPanel.revalidate();
+            colorsPanel.repaint();
+        }
+    }
+
+    private void addRandomColor(ActionEvent e) {
+        boolean isRGB = rgbRadio.isSelected();
+        String hex = generateRandomHex(isRGB ? 6 : 8);
+        ColorEntry entry = new ColorEntry();
+        entry.colorField.setText(hex);
+        colorEntries.add(entry);
+
+        JPanel entryPanel = new JPanel(new BorderLayout(5, 0));
+        entryPanel.add(entry.colorField, BorderLayout.CENTER);
+        entryPanel.add(entry.preview, BorderLayout.EAST);
+        entryPanel.setMaximumSize(new Dimension(200, 30));
+
+        colorsPanel.add(entryPanel);
+        colorsPanel.revalidate();
+        colorsPanel.repaint();
+    }
+
+    private String generateRandomHex(int length) {
+        StringBuilder sb = new StringBuilder("#");
+        String chars = "0123456789ABCDEF";
+        for (int i = 0; i < length; i++) {
+            sb.append(chars.charAt(random.nextInt(chars.length())));
+        }
+        return sb.toString();
+    }
+
     private void calculateAverage() {
         List<int[]> rgbaColors = new ArrayList<>();
 
         for (ColorEntry entry : colorEntries) {
             try {
                 String hex = entry.colorField.getText().trim();
+                if (hex.isEmpty()) continue; // Skip empty fields
+
                 hex = hex.startsWith("#") ? hex.substring(1) : hex;
                 hex = hex.toUpperCase();
 
@@ -116,7 +168,7 @@ public class Main extends JFrame {
         }
 
         if (rgbaColors.isEmpty()) {
-            resultLabel.setText("Average Color: No valid colors entered!");
+            resultLabel.setText("Average Color: No valid colors!");
             resultPreview.setBackground(null);
             return;
         }
@@ -136,7 +188,7 @@ public class Main extends JFrame {
                 String byteStr = hex.substring(i * 2, i * 2 + 2);
                 rgba[i] = Integer.parseInt(byteStr, 16);
             }
-        } catch (NumberFormatException | StringIndexOutOfBoundsException e) {
+        } catch (Exception e) {
             throw new IllegalArgumentException("Invalid hex string");
         }
         return rgba;
@@ -146,14 +198,12 @@ public class Main extends JFrame {
         int[] avg = new int[4];
         int count = rgbaColors.size();
 
-        // Sum all channels
         for (int[] color : rgbaColors) {
             for (int i = 0; i < 4; i++) {
                 avg[i] += color[i];
             }
         }
 
-        // Calculate averages with proper rounding
         for (int i = 0; i < 4; i++) {
             avg[i] = Math.round((float) avg[i] / count);
         }
@@ -162,17 +212,15 @@ public class Main extends JFrame {
     }
 
     private String rgbaToHex(int[] rgba) {
-        // Ensure values are clamped to 0-255 range
         for (int i = 0; i < 4; i++) {
             rgba[i] = Math.min(Math.max(rgba[i], 0), 255);
         }
-
         return String.format("#%02X%02X%02X%02X",
                 rgba[0], rgba[1], rgba[2], rgba[3]);
     }
 
     private class ColorEntry {
-        JTextField colorField = new JTextField(10);
+        JTextField colorField = new JTextField(12);
         JPanel preview = new JPanel() {
             @Override
             protected void paintComponent(Graphics g) {
@@ -183,7 +231,7 @@ public class Main extends JFrame {
         };
 
         ColorEntry() {
-            preview.setPreferredSize(new Dimension(30, 20));
+            preview.setPreferredSize(new Dimension(40, 25));
             colorField.getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
                 public void changedUpdate(javax.swing.event.DocumentEvent e) { update(); }
                 public void removeUpdate(javax.swing.event.DocumentEvent e) { update(); }
@@ -193,7 +241,10 @@ public class Main extends JFrame {
                     try {
                         String hex = colorField.getText().trim();
                         if (hex.startsWith("#")) hex = hex.substring(1);
-                        if (hex.isEmpty()) return;
+                        if (hex.isEmpty()) {
+                            preview.setBackground(Color.WHITE);
+                            return;
+                        }
 
                         boolean isRGB = rgbRadio.isSelected();
                         if (isRGB && hex.length() != 6) return;
@@ -210,7 +261,6 @@ public class Main extends JFrame {
         }
     }
 
-    // Custom WrapLayout class (required)
     public static class WrapLayout extends FlowLayout {
         public WrapLayout(int align, int hgap, int vgap) {
             super(align, hgap, vgap);
@@ -267,5 +317,3 @@ public class Main extends JFrame {
         SwingUtilities.invokeLater(() -> new Main().setVisible(true));
     }
 }
-
-
