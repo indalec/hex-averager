@@ -89,7 +89,7 @@ Contributions are welcome! Please follow these steps:
 
 ## License
 
-MIT License - see `LICENSE` file
+MIT License - see the [LICENSE](LICENSE) file
 
 ---
 
