@@ -2,7 +2,7 @@
 
 A Java Swing application that calculates the average color from mixed input formats (HEX, RGB, RGBA) with automatic format detection and real-time previews.
 
-![Screenshot](screenshot.png) *Add screenshot image later*
+![Demo](demo.png) *Add screenshot image later*
 
 ## Features
 
@@ -71,7 +71,7 @@ Invalid fields will be highlighted in pink
 Valid color formats:
 ```plaintext
 #ff6347
-rgb(255,99,71)
+(255,99,71)
 255,99,71,0.5
 (255, 99, 71, 127)
 ff6347cc
@@ -93,6 +93,6 @@ MIT License - see `LICENSE` file
 
 ---
 
-Created with ❤️ by [Your Name]
+Created with ❤️ by Inda :D
 
 Part of Java Swing learning journey
