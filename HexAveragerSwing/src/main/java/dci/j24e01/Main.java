@@ -9,9 +9,8 @@ import java.util.Random;
 public class Main extends JFrame {
     private final List<ColorEntry> colorEntries = new ArrayList<>();
     private final JPanel colorsPanel;
-    private final JRadioButton hexRgbRadio;
-    private final JRadioButton hexRgbaRadio;
     private final JRadioButton rgbRadio;
+    private final JRadioButton rgbaRadio;
     private final JLabel resultLabel;
     private final JPanel resultPreview;
     private final JButton calculateButton;
@@ -21,8 +20,8 @@ public class Main extends JFrame {
         setTitle("Color Average Calculator");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLayout(new BorderLayout());
-        setSize(1000, 600);
-        setMinimumSize(new Dimension(600, 400));
+        setSize(720, 500);
+        setMinimumSize(new Dimension(550, 400));
 
         // Top panel with GridBagLayout
         JPanel topPanel = new JPanel(new GridBagLayout());
@@ -32,12 +31,10 @@ public class Main extends JFrame {
         gbc.fill = GridBagConstraints.HORIZONTAL;
 
         ButtonGroup typeGroup = new ButtonGroup();
-        hexRgbRadio = new JRadioButton("Hex RGB (6)", true);
-        hexRgbaRadio = new JRadioButton("Hex RGBA (8)");
-        rgbRadio = new JRadioButton("RGB (0-255)");
-        typeGroup.add(hexRgbRadio);
-        typeGroup.add(hexRgbaRadio);
+        rgbRadio = new JRadioButton("RGB", true);
+        rgbaRadio = new JRadioButton("RGBA");
         typeGroup.add(rgbRadio);
+        typeGroup.add(rgbaRadio);
 
         JButton addButton = new JButton("Add");
         JButton removeButton = new JButton("Remove");
@@ -48,21 +45,18 @@ public class Main extends JFrame {
         // Row 1: Radio buttons
         gbc.gridy = 0;
         gbc.gridx = 0;
-        topPanel.add(new JLabel("Color Format:"), gbc);
-
-        gbc.gridx++;
-        topPanel.add(hexRgbRadio, gbc);
-
-        gbc.gridx++;
-        topPanel.add(hexRgbaRadio, gbc);
+        topPanel.add(new JLabel("Output Format:"), gbc);
 
         gbc.gridx++;
         topPanel.add(rgbRadio, gbc);
 
+        gbc.gridx++;
+        topPanel.add(rgbaRadio, gbc);
+
         // Row 2: Action buttons
         gbc.gridy++;
         gbc.gridx = 0;
-        gbc.gridwidth = 4;
+        gbc.gridwidth = 3;
         JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 0));
         buttonPanel.add(addButton);
         buttonPanel.add(removeButton);
@@ -131,18 +125,17 @@ public class Main extends JFrame {
         Color selectedColor = JColorChooser.showDialog(this, "Choose Color", Color.WHITE);
         if (selectedColor != null) {
             String colorString;
-            if (rgbRadio.isSelected()) {
-                colorString = String.format("(%d,%d,%d)",
-                        selectedColor.getRed(),
-                        selectedColor.getGreen(),
-                        selectedColor.getBlue());
-            } else {
-                String format = hexRgbaRadio.isSelected() ? "#%02X%02X%02X%02X" : "#%02X%02X%02X";
-                colorString = String.format(format,
+            if (rgbaRadio.isSelected()) {
+                colorString = String.format("#%02X%02X%02X%02X",
                         selectedColor.getRed(),
                         selectedColor.getGreen(),
                         selectedColor.getBlue(),
                         selectedColor.getAlpha());
+            } else {
+                colorString = String.format("#%02X%02X%02X",
+                        selectedColor.getRed(),
+                        selectedColor.getGreen(),
+                        selectedColor.getBlue());
             }
 
             ColorEntry entry = new ColorEntry();
@@ -169,18 +162,17 @@ public class Main extends JFrame {
         );
 
         String colorString;
-        if (rgbRadio.isSelected()) {
-            colorString = String.format("(%d,%d,%d)",
-                    color.getRed(),
-                    color.getGreen(),
-                    color.getBlue());
-        } else {
-            String format = hexRgbaRadio.isSelected() ? "#%02X%02X%02X%02X" : "#%02X%02X%02X";
-            colorString = String.format(format,
+        if (rgbaRadio.isSelected()) {
+            colorString = String.format("#%02X%02X%02X%02X",
                     color.getRed(),
                     color.getGreen(),
                     color.getBlue(),
                     color.getAlpha());
+        } else {
+            colorString = String.format("#%02X%02X%02X",
+                    color.getRed(),
+                    color.getGreen(),
+                    color.getBlue());
         }
 
         ColorEntry entry = new ColorEntry();
@@ -205,13 +197,7 @@ public class Main extends JFrame {
                 String input = entry.colorField.getText().trim();
                 if (input.isEmpty()) continue;
 
-                int[] rgba = new int[4];
-                if (rgbRadio.isSelected()) {
-                    rgba = parseRgb(input);
-                } else {
-                    rgba = parseHex(input);
-                }
-
+                int[] rgba = parseColor(input);
                 rgbaColors.add(rgba);
                 entry.colorField.setBackground(Color.WHITE);
             } catch (IllegalArgumentException ex) {
@@ -230,26 +216,43 @@ public class Main extends JFrame {
         }
 
         int[] avgRgba = averageRgbaChannels(rgbaColors);
-        String hexResult = rgbaToHex(avgRgba);
+        String hexResult;
+        Color previewColor;
+        if (rgbRadio.isSelected()) {
+            hexResult = String.format("#%02X%02X%02X", avgRgba[0], avgRgba[1], avgRgba[2]);
+            previewColor = new Color(avgRgba[0], avgRgba[1], avgRgba[2]);
+        } else {
+            hexResult = String.format("#%02X%02X%02X%02X", avgRgba[0], avgRgba[1], avgRgba[2], avgRgba[3]);
+            previewColor = new Color(avgRgba[0], avgRgba[1], avgRgba[2], avgRgba[3]);
+        }
         resultLabel.setText("Average Color: " + hexResult);
-        resultPreview.setBackground(new Color(
-                avgRgba[0], avgRgba[1], avgRgba[2], avgRgba[3]));
+        resultPreview.setBackground(previewColor);
         resultPreview.repaint();
+    }
+
+    private int[] parseColor(String input) {
+        input = input.trim();
+        if (input.startsWith("#")) {
+            return parseHex(input);
+        } else if (input.matches("^[0-9A-Fa-f]{6,8}$")) {
+            return parseHex("#" + input);
+        } else {
+            return parseRgb(input);
+        }
     }
 
     private int[] parseHex(String input) {
         String hex = input.startsWith("#") ? input.substring(1) : input;
         hex = hex.toUpperCase();
 
-        boolean isHexRgba = hexRgbaRadio.isSelected();
-        if (isHexRgba) {
-            if (hex.length() != 8 || !hex.matches("[0-9A-F]+")) {
-                throw new IllegalArgumentException();
-            }
-        } else {
-            if (hex.length() != 6 || !hex.matches("[0-9A-F]+")) {
-                throw new IllegalArgumentException();
-            }
+        if (hex.length() != 6 && hex.length() != 8) {
+            throw new IllegalArgumentException("Invalid hex length");
+        }
+        if (!hex.matches("[0-9A-F]+")) {
+            throw new IllegalArgumentException("Invalid hex characters");
+        }
+
+        if (hex.length() == 6) {
             hex += "FF";
         }
 
@@ -257,33 +260,49 @@ public class Main extends JFrame {
     }
 
     private int[] parseRgb(String input) {
-        if (!input.matches("\\(\\d{1,3},\\d{1,3},\\d{1,3}\\)")) {
-            throw new IllegalArgumentException();
+        input = input.replaceAll("[()]", "").trim();
+        String[] parts = input.split(",");
+        if (parts.length < 3 || parts.length > 4) {
+            throw new IllegalArgumentException("Invalid component count");
         }
 
-        String[] parts = input.replaceAll("[()]", "").split(",");
         int[] rgba = new int[4];
         for (int i = 0; i < 3; i++) {
-            int value = Integer.parseInt(parts[i]);
+            String part = parts[i].trim();
+            int value = Integer.parseInt(part);
             if (value < 0 || value > 255) {
-                throw new IllegalArgumentException();
+                throw new IllegalArgumentException("Value out of range: " + value);
             }
             rgba[i] = value;
         }
-        rgba[3] = 255; // Full opacity
+
+        if (parts.length == 4) {
+            String alphaPart = parts[3].trim();
+            try {
+                float alpha = Float.parseFloat(alphaPart);
+                if (alpha < 0 || alpha > 1) {
+                    throw new IllegalArgumentException("Alpha out of range: " + alpha);
+                }
+                rgba[3] = Math.round(alpha * 255);
+            } catch (NumberFormatException e) {
+                int alpha = Integer.parseInt(alphaPart);
+                if (alpha < 0 || alpha > 255) {
+                    throw new IllegalArgumentException("Alpha out of range: " + alpha);
+                }
+                rgba[3] = alpha;
+            }
+        } else {
+            rgba[3] = 255;
+        }
 
         return rgba;
     }
 
     private int[] hexToRgba(String hex) {
         int[] rgba = new int[4];
-        try {
-            for (int i = 0; i < 4; i++) {
-                String byteStr = hex.substring(i * 2, i * 2 + 2);
-                rgba[i] = Integer.parseInt(byteStr, 16);
-            }
-        } catch (Exception e) {
-            throw new IllegalArgumentException("Invalid hex string");
+        for (int i = 0; i < 4; i++) {
+            String byteStr = hex.substring(i * 2, i * 2 + 2);
+            rgba[i] = Integer.parseInt(byteStr, 16);
         }
         return rgba;
     }
@@ -303,14 +322,6 @@ public class Main extends JFrame {
         }
 
         return avg;
-    }
-
-    private String rgbaToHex(int[] rgba) {
-        for (int i = 0; i < 4; i++) {
-            rgba[i] = Math.min(Math.max(rgba[i], 0), 255);
-        }
-        return String.format("#%02X%02X%02X%02X",
-                rgba[0], rgba[1], rgba[2], rgba[3]);
     }
 
     private class ColorEntry {
@@ -339,13 +350,7 @@ public class Main extends JFrame {
                             return;
                         }
 
-                        int[] rgba;
-                        if (rgbRadio.isSelected()) {
-                            rgba = parseRgb(input);
-                        } else {
-                            rgba = parseHex(input);
-                        }
-
+                        int[] rgba = parseColor(input);
                         preview.setBackground(new Color(rgba[0], rgba[1], rgba[2], rgba[3]));
                     } catch (Exception ex) {
                         preview.setBackground(Color.WHITE);
