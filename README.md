@@ -2,7 +2,7 @@
 
 A Java Swing application that calculates the average color from mixed input formats (HEX, RGB, RGBA) with automatic format detection and real-time previews.
 
-![Demo](demo.png) *Add screenshot image later*
+![Demo](demo.png)
 
 ## Features
 
